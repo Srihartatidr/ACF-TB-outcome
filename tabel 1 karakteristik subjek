@@ -1,0 +1,618 @@
+// table 1 karakteristik pasien pada saat diagnosis TB paru berdasarkan metode penemuan kasus
+leftalign
+browse
+
+// DATA PREPARATION//
+// cek kesesuaian eligible consent di crf1 dan crf2
+tab eligible eligible1
+tab consent consent1
+tab subject_cat eligible
+
+keep if eligible==1
+keep if consent==1
+tab subject_cat eligible
+tab subject_cat consent
+
+// labelling
+label define casecatlab 0 "Not TB" 1 "Definite TB" 2 "Probable TB" 3 "Possible TB" 4 "Uncategorized"
+label list
+label value case_category m4_case_category m8_case_category m12_case_category casecatlab
+
+// calculating TB case definition based on subject_cat
+tab case_category subject_cat, m
+tab m4_case_category subject_cat, m
+tab m8_case_category subject_cat, m
+tab m12_case_category subject_cat, m
+
+*generate event_tb variable
+generate event_tb=.
+replace event_tb=1 if case_category==1 | m4_case_category==1 | m8_case_category==1 | m12_case_category==1 | case_category==2 | m4_case_category==2 | m8_case_category==2 | m12_case_category==2
+replace event_tb=0 if event_tb!=1
+tabulate subject_cat event_tb
+keep if event_tb==1
+
+*generate acf variable(pcf=1, acf=2)
+generate acf=.
+replace acf=1 if subject_cat==2 | subject_cat==3
+replace acf=0 if acf!=1
+label define acflab 0 "PCF" 1 "ACF"
+label value acf acflab
+
+*cek yang sedang pengobatan saat baseline, maka dia bukan pasien ACF, tapi PCF
+browse subject_id subject_cat date_baseline tb_diag tbdiag_date case_category
+sort subject_cat tb_diag case_category
+* ID 25054902 NC sedang pengobatan TB
+* ID 25088403 NC ASF Sukahaji
+* ID 25099201 NC ASF Caringin
+* ID 25106703 NC IPS Sukahaji sedang pengobatan TB
+* ID 25116602 NC MNL Cidul sedang pengobatan TB
+* ID 25138903 NC GJH Cidul sedang pengobatan TB
+* ID 25149502 NC TB kelenjar sedang dalam pengobatan TB
+* ID 25151101 NC MNL Cidul sedang pengobatan TB
+* ID 25166902 NC CYJ Cidul sedang pengobatan TB
+* ID 25169601 NC CYJ Caringin
+* ID 25202102 NC sedang dalam pengobatan TB
+* ada 11 ID yang diubah
+
+sort subject_id
+replace acf=0 in 120
+replace acf=0 in 182
+replace acf=0 in 207
+replace acf=0 in 218
+replace acf=0 in 231
+replace acf=0 in 256
+replace acf=0 in 264
+replace acf=0 in 265
+replace acf=0 in 279
+replace acf=0 in 281
+replace acf=0 in 302
+
+tab acf event_tb
+
+           |  event_tb
+       acf |         1 |     Total
+-----------+-----------+----------
+         0 |       224 |       224 
+         1 |        78 |        78 
+-----------+-----------+----------
+     Total |       302 |       302 
+
+browse 
+
+*selecting pulmonary tb"
+generate pulmotb=.
+replace pulmotb=1
+replace pulmotb=0 in 12 
+* ID 25002504 TB adrenal
+replace pulmotb=0 in 43
+* ID 25012903 TB kelenjar
+replace pulmotb=0 in 264
+* ID 25149502 TB kelenjar
+replace pulmotb=0 in 302
+* ID 25202102 TB meningitis
+tab pulmotb event_tb
+keep if pulmotb==1
+tab event_tb acf
+tab pulmotb acf
+keep if pulmotb==1
+
+*mendata subjek yang didiagnosis TB saat FU
+list subject_id subject_cat m4_case_category if m4_case_category==1 | m4_case_category==2
+
+     | subjec~d   subjec~t   m4_case_c~y |
+     |-----------------------------------|
+ 46. | 25013804          2   Definite TB |
+114. | 25051902          2   Definite TB |
+176. | 25085201          3   Definite TB |
+291. | 25183102          2   Definite TB 
+
+list subject_id subject_cat m8_case_category if m8_case_category==1 | m8_case_category==2
+     | subjec~d   subjec~t   m8_case_c~y |
+     |-----------------------------------|
+ 72. | 25029301          3   Definite TB |
+110. | 25049002          2   Definite TB |
+112. | 25051203          3   Definite TB |
+210. | 25101904          2   Definite TB |
+214. | 25106603          3   Definite TB |
+     |-----------------------------------|
+259. | 25143402          2   Definite TB |
+265. | 25154301          3   Definite TB |
+281. | 25173003          3   Definite TB 
+
+list subject_id subject_cat m12_case_category if m12_case_category==1 | m12_case_category==2
+     | subjec~d   subjec~t   m12_case_~y |
+     |-----------------------------------|
+ 10. | 25001102          2   Definite TB |
+ 12. | 25002602          3   Definite TB |
+ 66. | 25023303          2   Definite TB |
+ 88. | 25036401          3   Definite TB |
+123. | 25056903          2   Definite TB |
+     |-----------------------------------|
+137. | 25064704          3   Definite TB |
+145. | 25067401          3   Definite TB |
+169. | 25080901          3   Definite TB |
+185. | 25090002          2   Definite TB |
+202. | 25095603          2   Definite TB |
+     |-----------------------------------|
+230. | 25116701          3   Definite TB
+
+*membuat variabel baru = gejala saat diagnosis
+browse subject_id subject_cat coughing m4_coughing m8_coughing m12_coughing acf coughingfinal
+generate coughingfinal=.
+replace coughingfinal=coughing
+replace coughingfinal=m4_coughing in 46
+replace coughingfinal=m4_coughing in 114
+replace coughingfinal=m4_coughing in 176
+replace coughingfinal=m4_coughing in 291
+replace coughingfinal=m8_coughing in 72
+replace coughingfinal=m8_coughing in 110
+replace coughingfinal=m8_coughing in 112
+replace coughingfinal=m8_coughing in 210
+replace coughingfinal=m8_coughing in 214
+replace coughingfinal=m8_coughing in 259
+replace coughingfinal=m8_coughing in 265
+replace coughingfinal=m8_coughing in 281
+replace coughingfinal=m12_coughing in 10
+replace coughingfinal=m12_coughing in 12
+replace coughingfinal=m12_coughing in 66
+replace coughingfinal=m12_coughing in 88
+replace coughingfinal=m12_coughing in 123
+replace coughingfinal=m12_coughing in 137
+replace coughingfinal=m12_coughing in 145
+replace coughingfinal=m12_coughing in 169
+replace coughingfinal=m12_coughing in 185
+replace coughingfinal=m12_coughing in 202
+replace coughingfinal=m12_coughing in 230
+
+generate coughdurfinal=.
+replace coughdurfinal=cough_dur
+replace coughdurfinal=m4_cough_dur in 46
+replace coughdurfinal=m4_cough_dur in 114
+replace coughdurfinal=m4_cough_dur in 176
+replace coughdurfinal=m4_cough_dur in 291
+replace coughdurfinal=m8_cough_dur in 72
+replace coughdurfinal=m8_cough_dur in 110
+replace coughdurfinal=m8_cough_dur in 112
+replace coughdurfinal=m8_cough_dur in 210
+replace coughdurfinal=m8_cough_dur in 214
+replace coughdurfinal=m8_cough_dur in 259
+replace coughdurfinal=m8_cough_dur in 265
+replace coughdurfinal=m8_cough_dur in 281
+replace coughdurfinal=m12_cough_dur in 10
+replace coughdurfinal=m12_cough_dur in 12
+replace coughdurfinal=m12_cough_dur in 66
+replace coughdurfinal=m12_cough_dur in 88
+replace coughdurfinal=m12_cough_dur in 123
+replace coughdurfinal=m12_cough_dur in 137
+replace coughdurfinal=m12_cough_dur in 145
+replace coughdurfinal=m12_cough_dur in 169
+replace coughdurfinal=m12_cough_dur in 185
+replace coughdurfinal=m12_cough_dur in 202
+replace coughdurfinal=m12_cough_dur in 230
+
+generate coughbloodfinal=.
+replace coughbloodfinal=cough_blood
+replace coughbloodfinal=m4_cough_blood in 46
+replace coughbloodfinal=m4_cough_blood in 114
+replace coughbloodfinal=m4_cough_blood in 176
+replace coughbloodfinal=m4_cough_blood in 291
+replace coughbloodfinal=m8_cough_blood in 72
+replace coughbloodfinal=m8_cough_blood in 110
+replace coughbloodfinal=m8_cough_blood in 112
+replace coughbloodfinal=m8_cough_blood in 210
+replace coughbloodfinal=m8_cough_blood in 214
+replace coughbloodfinal=m8_cough_blood in 259
+replace coughbloodfinal=m8_cough_blood in 265
+replace coughbloodfinal=m8_cough_blood in 281
+replace coughbloodfinal=m12_cough_blood in 10
+replace coughbloodfinal=m12_cough_blood in 12
+replace coughbloodfinal=m12_cough_blood in 66
+replace coughbloodfinal=m12_cough_blood in 88
+replace coughbloodfinal=m12_cough_blood in 123
+replace coughbloodfinal=m12_cough_blood in 137
+replace coughbloodfinal=m12_cough_blood in 145
+replace coughbloodfinal=m12_cough_blood in 169
+replace coughbloodfinal=m12_cough_blood in 185
+replace coughbloodfinal=m12_cough_blood in 202
+replace coughbloodfinal=m12_cough_blood in 230
+
+generate chestpainfinal=.
+replace chestpainfinal=chest_pain
+replace chestpainfinal=m4_chestpain in 46
+replace chestpainfinal=m4_chestpain in 114
+replace chestpainfinal=m4_chestpain in 176
+replace chestpainfinal=m4_chestpain in 291
+replace chestpainfinal=m8_chestpain in 72
+replace chestpainfinal=m8_chestpain in 110
+replace chestpainfinal=m8_chestpain in 112
+replace chestpainfinal=m8_chestpain in 210
+replace chestpainfinal=m8_chestpain in 214
+replace chestpainfinal=m8_chestpain in 259
+replace chestpainfinal=m8_chestpain in 265
+replace chestpainfinal=m8_chestpain in 281
+replace chestpainfinal=m12_chestpain in 10
+replace chestpainfinal=m12_chestpain in 12
+replace chestpainfinal=m12_chestpain in 66
+replace chestpainfinal=m12_chestpain in 88
+replace chestpainfinal=m12_chestpain in 123
+replace chestpainfinal=m12_chestpain in 137
+replace chestpainfinal=m12_chestpain in 145
+replace chestpainfinal=m12_chestpain in 169
+replace chestpainfinal=m12_chestpain in 185
+replace chestpainfinal=m12_chestpain in 202
+replace chestpainfinal=m12_chestpain in 230
+
+generate feverfinal=.
+replace feverfinal=fever
+replace feverfinal=m4_fever in 46
+replace feverfinal=m4_fever in 114
+replace feverfinal=m4_fever in 176
+replace feverfinal=m4_fever in 291
+replace feverfinal=m8_fever in 72
+replace feverfinal=m8_fever in 110
+replace feverfinal=m8_fever in 112
+replace feverfinal=m8_fever in 210
+replace feverfinal=m8_fever in 214
+replace feverfinal=m8_fever in 259
+replace feverfinal=m8_fever in 265
+replace feverfinal=m8_fever in 281
+replace feverfinal=m12_fever in 10
+replace feverfinal=m12_fever in 12
+replace feverfinal=m12_fever in 66
+replace feverfinal=m12_fever in 88
+replace feverfinal=m12_fever in 123
+replace feverfinal=m12_fever in 137
+replace feverfinal=m12_fever in 145
+replace feverfinal=m12_fever in 169
+replace feverfinal=m12_fever in 185
+replace feverfinal=m12_fever in 202
+replace feverfinal=m12_fever in 230
+
+generate nightsweatfinal=.
+replace nightsweatfinal=nightsweat
+replace nightsweatfinal=m4_nightsweat in 46
+replace nightsweatfinal=m4_nightsweat in 114
+replace nightsweatfinal=m4_nightsweat in 176
+replace nightsweatfinal=m4_nightsweat in 291
+replace nightsweatfinal=m8_nightsweat in 72
+replace nightsweatfinal=m8_nightsweat in 110
+replace nightsweatfinal=m8_nightsweat in 112
+replace nightsweatfinal=m8_nightsweat in 210
+replace nightsweatfinal=m8_nightsweat in 214
+replace nightsweatfinal=m8_nightsweat in 259
+replace nightsweatfinal=m8_nightsweat in 265
+replace nightsweatfinal=m8_nightsweat in 281
+replace nightsweatfinal=m12_nightsweat in 10
+replace nightsweatfinal=m12_nightsweat in 12
+replace nightsweatfinal=m12_nightsweat in 66
+replace nightsweatfinal=m12_nightsweat in 88
+replace nightsweatfinal=m12_nightsweat in 123
+replace nightsweatfinal=m12_nightsweat in 137
+replace nightsweatfinal=m12_nightsweat in 145
+replace nightsweatfinal=m12_nightsweat in 169
+replace nightsweatfinal=m12_nightsweat in 185
+replace nightsweatfinal=m12_nightsweat in 202
+replace nightsweatfinal=m12_nightsweat in 230
+
+generate weightlossfinal=.
+replace weightlossfinal=weightloss
+replace weightlossfinal=m4_weightloss in 46
+replace weightlossfinal=m4_weightloss in 114
+replace weightlossfinal=m4_weightloss in 176
+replace weightlossfinal=m4_weightloss in 291
+replace weightlossfinal=m8_weightloss in 72
+replace weightlossfinal=m8_weightloss in 110
+replace weightlossfinal=m8_weightloss in 112
+replace weightlossfinal=m8_weightloss in 210
+replace weightlossfinal=m8_weightloss in 214
+replace weightlossfinal=m8_weightloss in 259
+replace weightlossfinal=m8_weightloss in 265
+replace weightlossfinal=m8_weightloss in 281
+replace weightlossfinal=m12_weightloss in 10
+replace weightlossfinal=m12_weightloss in 12
+replace weightlossfinal=m12_weightloss in 66
+replace weightlossfinal=m12_weightloss in 88
+replace weightlossfinal=m12_weightloss in 123
+replace weightlossfinal=m12_weightloss in 137
+replace weightlossfinal=m12_weightloss in 145
+replace weightlossfinal=m12_weightloss in 169
+replace weightlossfinal=m12_weightloss in 185
+replace weightlossfinal=m12_weightloss in 202
+replace weightlossfinal=m12_weightloss in 230
+
+generate fatiguefinal=.
+replace fatiguefinal=fatigue
+replace fatiguefinal=m4_fatigue in 46
+replace fatiguefinal=m4_fatigue in 114
+replace fatiguefinal=m4_fatigue in 176
+replace fatiguefinal=m4_fatigue in 291
+replace fatiguefinal=m8_fatigue in 72
+replace fatiguefinal=m8_fatigue in 110
+replace fatiguefinal=m8_fatigue in 112
+replace fatiguefinal=m8_fatigue in 210
+replace fatiguefinal=m8_fatigue in 214
+replace fatiguefinal=m8_fatigue in 259
+replace fatiguefinal=m8_fatigue in 265
+replace fatiguefinal=m8_fatigue in 281
+replace fatiguefinal=m12_fatigue in 10
+replace fatiguefinal=m12_fatigue in 12
+replace fatiguefinal=m12_fatigue in 66
+replace fatiguefinal=m12_fatigue in 88
+replace fatiguefinal=m12_fatigue in 123
+replace fatiguefinal=m12_fatigue in 137
+replace fatiguefinal=m12_fatigue in 145
+replace fatiguefinal=m12_fatigue in 169
+replace fatiguefinal=m12_fatigue in 185
+replace fatiguefinal=m12_fatigue in 202
+replace fatiguefinal=m12_fatigue in 230
+
+*generating new variable: bmi category
+generate bmicat=.
+replace bmicat=1 if (bmi<18.5)
+replace bmicat=2 if (bmi>=18.5 & bmi<=22.9)
+replace bmicat=3 if (bmi>=23.0 & bmi<=24.9)
+replace bmicat=4 if (bmi>=25.0 & bmi<.)
+
+*memeriksa cxr
+browse subject_id subject_cat acf cxr_result m4_cxr_result m8_cxr_result m12_cxr_result
+
+generate cxrfinal=.
+replace cxrfinal=cxr_result
+replace cxrfinal=m4_cxr_result in 46
+replace cxrfinal=m4_cxr_result in 114
+replace cxrfinal=m4_cxr_result in 176
+replace cxrfinal=m4_cxr_result in 291
+replace cxrfinal=m8_cxr_result in 72
+replace cxrfinal=m8_cxr_result in 110
+replace cxrfinal=m8_cxr_result in 112
+replace cxrfinal=m8_cxr_result in 210
+replace cxrfinal=m8_cxr_result in 214
+replace cxrfinal=m8_cxr_result in 259
+replace cxrfinal=m8_cxr_result in 265
+replace cxrfinal=m8_cxr_result in 281
+replace cxrfinal=m12_cxr_result in 10
+replace cxrfinal=m12_cxr_result in 12
+replace cxrfinal=m12_cxr_result in 66
+replace cxrfinal=m12_cxr_result in 88
+replace cxrfinal=m12_cxr_result in 123
+replace cxrfinal=m12_cxr_result in 137
+replace cxrfinal=m12_cxr_result in 145
+replace cxrfinal=m12_cxr_result in 169
+replace cxrfinal=m12_cxr_result in 185
+replace cxrfinal=m12_cxr_result in 202
+replace cxrfinal=m12_cxr_result in 230
+
+label define cxrresultlab 0 "Normal" 1 "Suggestive active TB" 2 "Suggestive inactive TB" 3 "Abnormal-not TB" 4 "Refused CXR"
+label values cxrfinal cxrresultlab
+
+replace cxrfinal=1 in 46
+replace cxrfinal=1 in 110
+replace cxrfinal=0 in 169
+replace cxrfinal=0 in 214
+replace cxrfinal=0 in 259
+replace cxrfinal=1 in 291
+
+// ANALISIS //
+*normalitas checking for variable: age
+*visually
+histogram age, normal
+histogram age, normal by(acf)
+
+*statistically
+sktest age
+summarize age, d
+summarize age if acf==0,d
+summarize age if acf==1,d
+ranksum age, by (acf)
+
+tabulate sex acf, col chi2
+tabulate smokes acf, m col chi2
+tabulate hiv_diag acf, m col chi2
+
+*generating new variable: dmknown
+sort immune_dis
+generate dmknown=.
+browse subject_id immune_dis dmknown
+replace dmknown=1 if (immune_dis== "1" | immune_dis== "1,4" | immune_dis== "1,4,5,7,8" | immune_dis== "1,5" | immune_dis== "1,7")
+replace dmknown=0 if dmknown!=1
+tab dmknown acf, m col chi2
+
+*generating new variable: dmnew
+generate dmhba1c=.
+browse subject_id immune_dis dmknown hba1c_done hba1c_date hba1c_result dmhba1c
+replace dmhba1c=1 if (hba1c_result<6.5)
+replace dmhba1c=2 if (hba1c_result>=6.5)
+replace dmhba1c=3 if hba1c_result==.
+sort hba1c_result
+
+tab bcg_scar acf, m col chi2
+tab coughingfinal acf, m col chi2
+
+*normalitas checking for variable: cough_dur
+*visually
+histogram coughdurfinal if coughingfinal==1, bin (30) normal
+histogram coughdurfinal if coughingfinal==1, normal by(acf)
+qnorm coughdurfinal if coughingfinal==1
+
+*statistically
+sktest coughdurfinal if coughingfinal==1
+summarize coughdurfinal if coughingfinal==1,d
+summarize coughdurfinal if acf==0 & coughingfinal==1,d
+summarize coughdurfinal if acf==1 & coughingfinal==1,d
+ranksum coughdurfinal if coughingfinal==1, by(acf)
+
+tab coughbloodfinal acf, m col chi2
+tab chestpainfinal acf, m col chi2
+tab feverfinal acf, m col chi2
+tab nightsweatfinal acf, m col chi2
+tab weightlossfinal acf, m col chi2
+tab fatiguefinal acf, m col chi2
+tab bmicat acf, m col chi2
+browse subject_id subject_cat acf cxr_result m4_cxr result m8_cxr_result m12_cxr_result
+tab cxrfinal acf, m col chi2
+tab cxrfinal acf if cxrfinal!=. & cxrfinal!=4, m col chi2					  
+
+                      |          acf
+             cxrfinal |       PCF        ACF |     Total
+----------------------+----------------------+----------
+               Normal |        15         18 |        33 
+                      |      8.24      25.00 |     12.99 
+----------------------+----------------------+----------
+ Suggestive active TB |       150         47 |       197 
+                      |     82.42      65.28 |     77.56 
+----------------------+----------------------+----------
+Suggestive inactive T |         2          0 |         2 
+                      |      1.10       0.00 |      0.79 
+----------------------+----------------------+----------
+      Abnormal-not TB |        15          7 |        22 
+                      |      8.24       9.72 |      8.66 
+----------------------+----------------------+----------
+                Total |       182         72 |       254 
+                      |    100.00     100.00 |    100.00 
+
+browse subject_id subject_cat acf smear1_result smear2_result m4_smear1_result m4_smear2_result	m8_smear1_result m8_smear2_result m12_smear1_result m12_smear2_result	  
+*generating new variable: smear result final (baseline)
+gsort smear1_result smear2_result
+generate smear_fin=.
+browse subject_id case_category smear1_result smear2_result m4_smear1_result m4_smear2_result m4_case_category m8_smear1_result m8_smear2_result m8_case_category m12_smear1_result m12_smear2_result m12_case_category smear_fin
+
+//Negative
+replace smear_fin=0 if smear1_result==0 & smear2_result==0
+replace smear_fin=0 if smear1_result==0 & smear2_result==5
+replace smear_fin=0 if smear1_result==5 & smear2_result==0
+replace smear_fin=0 if smear1_result==0 & smear2_result==.
+//Scanty
+replace smear_fin=1 if smear1_result==0 & smear2_result==1
+replace smear_fin=1 if smear1_result==1 & smear2_result==0
+replace smear_fin=1 if smear1_result==1 & smear2_result==1
+replace smear_fin=1 if smear1_result==5 & smear2_result==1 
+//Positive 1
+replace smear_fin=2 if smear1_result==0 & smear2_result==2
+replace smear_fin=2 if smear1_result==2 & smear2_result==0
+replace smear_fin=2 if smear1_result==1 & smear2_result==2
+replace smear_fin=2 if smear1_result==2 & smear2_result==1
+replace smear_fin=2 if smear1_result==2 & smear2_result==2
+replace smear_fin=2 if smear1_result==2 & smear2_result==5
+replace smear_fin=2 if smear1_result==2 & smear2_result==.
+//Positive 2
+replace smear_fin=3 if smear1_result==0 & smear2_result==3
+replace smear_fin=3 if smear1_result==1 & smear2_result==3
+replace smear_fin=3 if smear1_result==2 & smear2_result==3
+replace smear_fin=3 if smear1_result==3 & smear2_result==0
+replace smear_fin=3 if smear1_result==3 & smear2_result==1
+replace smear_fin=3 if smear1_result==3 & smear2_result==2
+replace smear_fin=3 if smear1_result==3 & smear2_result==3 
+//Positive 3
+replace smear_fin=4 if smear1_result==0 & smear2_result==4
+replace smear_fin=4 if smear1_result==2 & smear2_result==4
+replace smear_fin=4 if smear1_result==3 & smear2_result==4
+replace smear_fin=4 if smear1_result==4 & smear2_result==0
+replace smear_fin=4 if smear1_result==4 & smear2_result==1
+replace smear_fin=4 if smear1_result==4 & smear2_result==2
+replace smear_fin=4 if smear1_result==4 & smear2_result==3
+replace smear_fin=4 if smear1_result==4 & smear2_result==4    
+//No result (sudah terakomodasi di atas semua)
+replace smear_fin=5 if
+tab subject_cat smear_fin, m
+
+label define smear_finlab 0 "Negative" 1 "Scanty" 2 "+1" 3 "+2" 4 "+3" 5 "No result"
+label values smear1_result smear2_result m4_smear1_result m4_smear2_result m8_smear1_result m8_smear2_result m12_smear1_result m12_smear2_result smear_fin smear_finlab
+
+sort subject_id
+replace smear_fin=0 in 46
+replace smear_fin=1 in 214
+replace smear_fin=1 in 265
+replace smear_fin=0 in 291
+
+tab smear_fin acf if smear_fin!=., m col chi2
+
+*generating new variable: xpert result
+browse subject_id case_category acf xpert_result m4_xpert_result m8_xpert_result m12_xpert_result xpert_fin
+gsort xpert_result m4_xpert_result m8_xpert_result m12_xpert_result
+generate xpert_fin=.
+label define xpertlab 0 "Mtb not detected" 1 "Rif susceptible" 2 "Rif resistant" 3 "Indeterminate" 4 "Error" 5 "Not done"
+label values xpert_fin xpertlab
+sort subject_id
+replace xpert_fin=xpert_result
+replace xpert_fin=0 in 12
+replace xpert_fin=0 in 46
+replace xpert_fin=1 in 72
+replace xpert_fin=1 in 88
+replace xpert_fin=5 in 114
+replace xpert_fin=0 in 123
+replace xpert_fin=1 in 137
+replace xpert_fin=1 in 185
+replace xpert_fin=1 in 202
+replace xpert_fin=5 in 210
+replace xpert_fin=1 in 214
+replace xpert_fin=1 in 230
+replace xpert_fin=1 in 259
+replace xpert_fin=1 in 265
+replace xpert_fin=1 in 291
+
+tab xpert_fin acf if xpert_fin!=5, m col chi2
+                 |          acf
+       xpert_fin |       PCF        ACF |     Total
+-----------------+----------------------+----------
+Mtb not detected |         1         22 |        23 
+                 |      0.53      40.74 |      9.43 
+-----------------+----------------------+----------
+ Rif susceptible |       187         32 |       219 
+                 |     98.42      59.26 |     89.75 
+-----------------+----------------------+----------
+   Rif resistant |         2          0 |         2 
+                 |      1.05       0.00 |      0.82 
+-----------------+----------------------+----------
+           Total |       190         54 |       244 
+                 |    100.00     100.00 |    100.00 
+
+*generating new variable: culture result final
+generate culture_fin=.
+sort culture1_result culture2_result
+browse subject_id subject_cat acf culture1_result culture2_result m4_culture1_result m4_culture2_result m8_culture1_result m8_culture2_result m12_culture1_result m12_culture2_result culture_fin
+sort subject_id
+label define culfinlab 0 "Negative" 1 "Positive" 2 "Indeterminate"
+label list
+label value culture_fin culfinlab 
+
+//Negative
+replace culture_fin=0 if culture1_result==1
+replace culture_fin=0 if culture1_result==1 & culture2_result==1
+replace culture_fin=0 if culture1_result==2
+//Positive
+replace culture_fin=1 if culture1_result==3
+replace culture_fin=1 if culture1_result==3 & culture2_result==3
+replace culture_fin=1 if culture1_result==4
+//Indeterminate
+replace culture_fin=2 if culture1_result==5
+
+replace culture_fin=1 in 12
+replace culture_fin=1 in 46
+replace culture_fin=1 in 88
+replace culture_fin=1 in 112
+replace culture_fin=1 in 123
+replace culture_fin=0 in 137
+replace culture_fin=0 in 185
+replace culture_fin=1 in 214
+replace culture_fin=0 in 230
+replace culture_fin=1 in 265
+replace culture_fin=0 in 291
+
+tabulate culture_fin acf, m col
+tabulate culture_fin acf if culture_fin!=., m col chi2
+              |          acf
+  culture_fin |       PCF        ACF |     Total
+--------------+----------------------+----------
+     Negative |        25         16 |        41 
+              |     11.57      24.62 |     14.59 
+--------------+----------------------+----------
+     Positive |       189         49 |       238 
+              |     87.50      75.38 |     84.70 
+--------------+----------------------+----------
+Indeterminate |         2          0 |         2 
+              |      0.93       0.00 |      0.71 
+--------------+----------------------+----------
+        Total |       216         65 |       281 
+              |    100.00     100.00 |    100.00 
+
+
